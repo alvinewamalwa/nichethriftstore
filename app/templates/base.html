@@ -1,0 +1,29 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Discover quality second-hand fashion at Niche Thrift Store.">
+    <title>{% block title %}Niche Thrift Store{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a class="brand" href="{{ url_for('shop.index') }}">Niche Thrift Store</a>
+            <p class="tagline">Good finds. Better prices.</p>
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; {{ 2026 }} Niche Thrift Store. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
