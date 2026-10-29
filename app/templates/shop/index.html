@@ -1,24 +1,82 @@
-
 {% extends "base.html" %}
 
-{% block title %}Home | Niche Thrift Store{% endblock %}
+{% block title %}Shop | Niche Thrift Store{% endblock %}
 
 {% block content %}
 <section class="hero">
     <p class="eyebrow">WELCOME TO NICHE</p>
     <h1>Find your next favourite piece.</h1>
     <p class="hero-description">
-        Explore unique thrift fashion at prices you'll love.
-        Our collection is being prepared, so check back soon.
+        Discover unique thrift fashion at prices you'll love.
+        Every piece has its own story.
     </p>
-    <span class="coming-soon">Our collection is coming soon</span>
+</section>
+
+<section class="catalogue">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">THE COLLECTION</p>
+            <h2>Explore our finds</h2>
+        </div>
+        <p class="catalogue-count">
+            {{ products|length }} items
+        </p>
+    </div>
+
+    {% if products %}
+        <div class="product-grid">
+            {% for product in products %}
+                <article class="product-card">
+                    <a
+                        class="product-link"
+                        href="{{ url_for(
+                            'shop.product_detail',
+                            slug=product['slug']
+                        ) }}"
+                    >
+                        <div class="product-image-placeholder"
+                             aria-label="Product photo not uploaded yet">
+                            <span>Photo coming soon</span>
+
+                            {% if product['status'] == 'sold' %}
+                                <span class="product-badge sold-badge">
+                                    SOLD
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="product-info">
+                            <h3>{{ product['name'] }}</h3>
+
+                            <p class="product-price">
+                                KSh {{ "{:,}".format(product['price']) }}
+                            </p>
+
+                            <p class="product-meta">
+                                {% if product['size'] %}
+                                    Size: {{ product['size'] }}
+                                {% else %}
+                                    Size not specified
+                                {% endif %}
+                            </p>
+                        </div>
+                    </a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-catalogue">
+            <h3>Our collection is being prepared.</h3>
+            <p>Check back soon to discover our latest thrift finds.</p>
+        </div>
+    {% endif %}
 </section>
 
 <section class="intro">
     <h2>Thrift differently.</h2>
     <p>
-        We're building a simple way to discover individual thrift finds.
-        Every piece will have its own details so you can choose what suits you.
+        Every piece is unique. Explore our collection and find
+        something that feels like you.
     </p>
 </section>
 {% endblock %}

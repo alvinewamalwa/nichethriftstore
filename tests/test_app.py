@@ -11,7 +11,7 @@ def test_homepage_returns_success(client):
 
     assert response.status_code == 200
     assert b"Find your next favourite piece." in response.data
-    assert b"Our collection is coming soon" in response.data
+    assert b"Explore our finds" in response.data
 
 
 def test_unknown_page_returns_404(client):

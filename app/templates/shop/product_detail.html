@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product['name'] }} | Niche Thrift Store{% endblock %}
+
+{% block content %}
+<section class="product-detail">
+    <a class="back-link" href="{{ url_for('shop.index') }}">
+        &larr; Back to collection
+    </a>
+
+    <div class="product-detail-grid">
+        <div class="product-detail-image">
+            {% if product['status'] == 'sold' %}
+                <span class="product-badge sold-badge">SOLD</span>
+            {% endif %}
+
+            <p>Product photo coming soon</p>
+        </div>
+
+        <div class="product-detail-info">
+            <p class="eyebrow">NICHE THRIFT STORE</p>
+            <h1>{{ product['name'] }}</h1>
+
+            <p class="detail-price">
+                KSh {{ "{:,}".format(product['price']) }}
+            </p>
+
+            <p>
+                <strong>Size:</strong>
+                {{ product['size'] or 'Not specified' }}
+            </p>
+
+            <p>
+                <strong>Condition:</strong>
+                {{ product['item_condition']|replace('_', ' ')|title }}
+            </p>
+
+            <p class="detail-description">
+                {{ product['description'] or 'No description available yet.' }}
+            </p>
+
+            {% if product['status'] == 'available' %}
+                <p class="availability available-text">
+                    This item is available.
+                </p>
+                <p class="purchase-note">
+                    Shopping cart functionality is coming in a later milestone.
+                </p>
+            {% else %}
+                <p class="availability sold-text">
+                    This item has been sold.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
