@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}Shop | Niche Thrift Store{% endblock %}
@@ -29,14 +30,21 @@
                 <article class="product-card">
                     <a
                         class="product-link"
-                        href="{{ url_for(
-                            'shop.product_detail',
-                            slug=product['slug']
-                        ) }}"
+                        href="{{ url_for('shop.product_detail', slug=product['slug']) }}"
                     >
-                        <div class="product-image-placeholder"
-                             aria-label="Product photo not uploaded yet">
-                            <span>Photo coming soon</span>
+                        <div class="product-image-wrapper">
+                            {% if product['image_filename'] %}
+                                <img
+                                    class="product-image"
+                                    src="{{ url_for('shop.product_image', filename=product['image_filename']) }}"
+                                    alt="{{ product['name'] }}"
+                                    loading="lazy"
+                                >
+                            {% else %}
+                                <div class="product-image-placeholder">
+                                    <span>Photo coming soon</span>
+                                </div>
+                            {% endif %}
 
                             {% if product['status'] == 'sold' %}
                                 <span class="product-badge sold-badge">

@@ -28,10 +28,23 @@ def close_db(exception=None):
 
 
 def init_db():
-    """Create the tables. Safe to run repeatedly; never deletes data."""
-    Path(current_app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
+    """Create tables and safely add columns to existing databases."""
+    Path(current_app.config["DATABASE"]).parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     db = get_db()
     db.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+
+    columns = {
+        row["name"]
+        for row in db.execute("PRAGMA table_info(products)").fetchall()
+    }
+
+    if "image_filename" not in columns:
+        db.execute("ALTER TABLE products ADD COLUMN image_filename TEXT")
+
     db.commit()
 
 

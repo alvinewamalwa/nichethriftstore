@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS products (
     slug           TEXT    NOT NULL UNIQUE CHECK (length(trim(slug)) > 0),
     name           TEXT    NOT NULL CHECK (length(trim(name)) > 0),
     description    TEXT    NOT NULL DEFAULT '',
+    image_filename TEXT,
     price          INTEGER NOT NULL CHECK (price >= 0),
     size           TEXT    NOT NULL DEFAULT '',
     item_condition TEXT    NOT NULL

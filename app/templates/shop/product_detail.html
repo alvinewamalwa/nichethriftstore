@@ -14,7 +14,23 @@
                 <span class="product-badge sold-badge">SOLD</span>
             {% endif %}
 
-            <p>Product photo coming soon</p>
+
+{% if product['image_filename'] %}
+    <img
+        class="product-detail-photo"
+        src="{{ url_for('shop.product_image', filename=product['image_filename']) }}"
+        alt="{{ product['name'] }}"
+        loading="lazy"
+    >
+{% else %}
+    <div
+        class="product-image-placeholder product-detail-image"
+        aria-label="Product photo not uploaded yet"
+    >
+        <span>Photo coming soon</span>
+    </div>
+{% endif %}
+
         </div>
 
         <div class="product-detail-info">

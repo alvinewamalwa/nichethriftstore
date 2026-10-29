@@ -1,0 +1,47 @@
+
+{% extends "base.html" %}
+
+{% block title %}Admin Login | Niche Thrift Store{% endblock %}
+
+{% block content %}
+<section class="admin-panel">
+    <p class="eyebrow">NICHE THRIFT STORE</p>
+    <h1>Administrator login</h1>
+    <p>Sign in to manage your store.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="flash-message {{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="post" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="username">Username</label>
+        <input
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+            maxlength="80"
+        >
+
+        <label for="password">Password</label>
+        <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+        >
+
+        <button type="submit">Sign in</button>
+    </form>
+
+    <p><a href="{{ url_for('shop.index') }}">Return to the shop</a></p>
+</section>
+{% endblock %}

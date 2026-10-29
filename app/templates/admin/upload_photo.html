@@ -1,0 +1,45 @@
+
+{% extends "base.html" %}
+
+{% block title %}Upload Product Photo | Niche Thrift Store{% endblock %}
+
+{% block content %}
+<section class="admin-panel">
+    <p class="eyebrow">STORE MANAGEMENT</p>
+    <h1>Upload product photo</h1>
+
+    <h2>{{ product['name'] }}</h2>
+    <p>Choose a clear photo of this item.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="flash-message {{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form
+        method="post"
+        enctype="multipart/form-data"
+        class="admin-form"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="photo">Product photo</label>
+        <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            required
+        >
+
+        <p>Accepted formats: JPEG, PNG and WebP. Maximum upload size: 5 MB.</p>
+
+        <button type="submit">Upload photo</button>
+    </form>
+
+    <p><a href="{{ url_for('admin.dashboard') }}">Return to dashboard</a></p>
+</section>
+{% endblock %}
