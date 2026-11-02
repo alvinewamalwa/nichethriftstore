@@ -1,135 +1,174 @@
-
 {% extends "base.html" %}
 
 {% block title %}Admin Dashboard | Niche Thrift Store{% endblock %}
 
 {% block content %}
-<section class="admin-panel admin-dashboard">
+<section class="admin-panel">
     <p class="eyebrow">STORE MANAGEMENT</p>
-    <h1>Welcome, {{ session.get('admin_username', 'Admin') }}</h1>
-    <p>Manage your products and their storefront photos.</p>
+    <h1>Admin Dashboard</h1>
+
+    <p>Welcome, {{ session.get('admin_username') }}.</p>
+    <p>Manage your products, prices, availability and storefront photos.</p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <p class="flash-message {{ category }}">
-                    {{ message }}
-                </p>
+                <p class="flash-message {{ category }}">{{ message }}</p>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <form method="post" action="{{ url_for('admin.logout') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="secondary-button">Log out</button>
-    </form>
+    <div class="admin-actions">
+        <a class="admin-button" href="{{ url_for('admin.create_product') }}">
+            Add new product
+        </a>
 
-    <h2>Your products</h2>
+        <form method="post" action="{{ url_for('admin.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="secondary-button">Log out</button>
+        </form>
+    </div>
+
+    <h2>Products ({{ products|length }})</h2>
 
     {% if products %}
         <div class="admin-product-list">
             {% for product in products %}
-                <article class="admin-product-row">
-                    <div class="admin-product-preview">
-                        {% if product['image_filename'] %}
-                            <img
-                                class="admin-product-thumbnail"
-                                src="{{ url_for(
-                                    'admin.product_photo_preview',
-                                    product_id=product['id']
-                                ) }}"
-                                alt="{{ product['name'] }} photo"
-                                loading="lazy"
-                            >
-                        {% else %}
-                            <div class="admin-thumbnail-placeholder">
-                                No photo
-                            </div>
-                        {% endif %}
-                    </div>
+                <article class="admin-product">
+                    {% if product['image_filename'] %}
+                        <img
+                            class="admin-product-image"
+                            src="{{ url_for(
+                                'admin.product_photo_preview',
+                                product_id=product['id']
+                            ) }}"
+                            alt="{{ product['name'] }}"
+                        >
+                    {% else %}
+                        <div class="admin-product-placeholder">
+                            No photo
+                        </div>
+                    {% endif %}
 
                     <div class="admin-product-details">
                         <h3>{{ product['name'] }}</h3>
 
-                        <p class="admin-product-price">
+                        <p>
+                            <strong>Price:</strong>
                             KSh {{ "{:,}".format(product['price']) }}
                         </p>
 
                         <p>
-                            Status:
-                            <strong>{{ product['status']|title }}</strong>
+                            <strong>Status:</strong>
+                            {{ product['status']|replace('_', ' ')|title }}
                         </p>
 
-                        {% if product['image_filename'] %}
-                            <p class="admin-photo-status">
-                                Photo uploaded
-                            </p>
-                        {% else %}
-                            <p class="admin-photo-status">
-                                No photo uploaded yet
-                            </p>
-                        {% endif %}
+                        <p>
+                            <strong>Photo:</strong>
+                            {{ "Uploaded" if product['image_filename'] else "Not uploaded" }}
+                        </p>
 
-                        <a
-                            class="admin-upload-link"
-                            href="{{ url_for(
+                        <div class="admin-product-actions">
+                            <a href="{{ url_for(
+                                'admin.edit_product',
+                                product_id=product['id']
+                            ) }}">
+                                Edit product
+                            </a>
+
+                            <a href="{{ url_for(
                                 'admin.upload_product_photo',
                                 product_id=product['id']
-                            ) }}"
-                        >
-                            {% if product['image_filename'] %}
-                                Replace photo
-                            {% else %}
-                                Upload photo
-                            {% endif %}
-                        </a>
+                            ) }}">
+                                {{ "Replace photo" if product['image_filename'] else "Upload photo" }}
+                            </a>
+
+                            <a
+                                href="{{ url_for(
+                                    'shop.product_detail',
+                                    slug=product['slug']
+                                ) }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                View public page
+                            </a>
+                        </div>
                     </div>
                 </article>
             {% endfor %}
         </div>
     {% else %}
-        <p>No products have been added yet.</p>
+        <p>You have not added any products yet.</p>
+        <p>Use the Add new product button to create your first listing.</p>
     {% endif %}
 </section>
 
 <style>
-    .admin-dashboard {
+    .admin-panel {
         max-width: 900px;
+        margin: 2rem auto;
     }
 
-    .admin-product-row {
-        display: grid;
-        grid-template-columns: 140px minmax(0, 1fr);
-        gap: 1.25rem;
-        align-items: center;
-    }
-
-    .admin-product-preview {
-        width: 140px;
-        height: 160px;
-        overflow: hidden;
-        border-radius: 8px;
-        background: #eeece4;
-    }
-
-    .admin-product-thumbnail {
-        display: block;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center;
-    }
-
-    .admin-thumbnail-placeholder {
+    .admin-actions {
         display: flex;
-        width: 100%;
-        height: 100%;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0 2rem;
+    }
+
+    .admin-actions form {
+        margin: 0;
+    }
+
+    .admin-button,
+    .secondary-button {
+        display: inline-block;
+        padding: 0.75rem 1.1rem;
+        border: 0;
+        border-radius: 5px;
+        background: #222;
+        color: #fff;
+        font: inherit;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .secondary-button {
+        background: #666;
+    }
+
+    .admin-product-list {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .admin-product {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.25rem;
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .admin-product-image,
+    .admin-product-placeholder {
+        width: 110px;
+        height: 130px;
+        flex-shrink: 0;
+        border-radius: 5px;
+        object-fit: cover;
+    }
+
+    .admin-product-placeholder {
+        display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0.5rem;
-        color: #687269;
+        background: #eee;
+        color: #555;
         text-align: center;
-        font-size: 0.85rem;
     }
 
     .admin-product-details {
@@ -137,33 +176,25 @@
     }
 
     .admin-product-details h3 {
-        overflow-wrap: anywhere;
+        margin-top: 0;
     }
 
-    .admin-product-price {
-        font-weight: 700;
-        color: #385844;
+    .admin-product-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
     }
 
-    .admin-photo-status {
-        color: #687269;
-        font-size: 0.9rem;
-    }
-
-    @media (max-width: 480px) {
-        .admin-product-row {
-            grid-template-columns: 95px minmax(0, 1fr);
-            gap: 0.85rem;
-            padding: 0.75rem;
+    @media (max-width: 600px) {
+        .admin-product {
+            flex-direction: column;
         }
 
-        .admin-product-preview {
-            width: 95px;
-            height: 125px;
-        }
-
-        .admin-product-details h3 {
-            font-size: 1rem;
+        .admin-product-image,
+        .admin-product-placeholder {
+            width: 100%;
+            height: 220px;
         }
     }
 </style>

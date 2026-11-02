@@ -1,10 +1,11 @@
-
-"""Administrator authentication, dashboard, and product photo routes."""
+"""Administrator authentication and product management routes."""
 
 from functools import wraps
 from getpass import getpass
 from pathlib import Path
+import re
 import secrets
+import unicodedata
 
 import click
 from flask import (
@@ -29,6 +30,20 @@ from ..db import get_db
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
+ALLOWED_CONDITIONS = {
+    "new_with_tags",
+    "excellent",
+    "good",
+    "fair",
+}
+
+ALLOWED_STATUSES = {
+    "available",
+    "reserved",
+    "sold",
+    "hidden",
+}
+
 
 def login_required(view):
     """Allow access only to authenticated administrators."""
@@ -40,6 +55,110 @@ def login_required(view):
         return view(**kwargs)
 
     return wrapped_view
+
+
+def make_product_slug(name):
+    """Create a URL-friendly slug from a product name."""
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_name.lower()).strip("-")
+    return slug or "product"
+
+
+def unique_product_slug(name):
+    """Generate a slug that does not already exist in the database."""
+    db = get_db()
+    base_slug = make_product_slug(name)
+    slug = base_slug
+    suffix = 2
+
+    while db.execute(
+        "SELECT 1 FROM products WHERE slug = ?",
+        (slug,),
+    ).fetchone():
+        slug = f"{base_slug}-{suffix}"
+        suffix += 1
+
+    return slug
+
+
+def product_form_values(form):
+    """Read and validate product fields submitted by an administrator."""
+    values = {
+        "name": form.get("name", "").strip(),
+        "description": form.get("description", "").strip(),
+        "price": form.get("price", "").strip(),
+        "size": form.get("size", "").strip(),
+        "item_condition": form.get("item_condition", "").strip(),
+        "status": form.get("status", "").strip(),
+    }
+
+    errors = {}
+
+    if not values["name"]:
+        errors["name"] = "Product name is required."
+    elif len(values["name"]) > 120:
+        errors["name"] = "Product name must be 120 characters or fewer."
+
+    if len(values["description"]) > 2000:
+        errors["description"] = "Description must be 2,000 characters or fewer."
+
+    if len(values["size"]) > 50:
+        errors["size"] = "Size must be 50 characters or fewer."
+
+    try:
+        price = int(values["price"])
+        if price < 0:
+            errors["price"] = "Price cannot be negative."
+        elif price > 100_000_000:
+            errors["price"] = "Price is too high."
+    except (TypeError, ValueError):
+        price = None
+        errors["price"] = "Enter a valid whole-number price in KSh."
+
+    if values["item_condition"] not in ALLOWED_CONDITIONS:
+        errors["item_condition"] = "Choose a valid product condition."
+
+    if values["status"] not in ALLOWED_STATUSES:
+        errors["status"] = "Choose a valid product status."
+
+    return values, price, errors
+
+
+def render_product_form(product=None, values=None, errors=None, status=200):
+    """Render the create or edit product form."""
+    is_editing = product is not None
+
+    if values is None:
+        if product is None:
+            values = {
+                "name": "",
+                "description": "",
+                "price": "",
+                "size": "",
+                "item_condition": "excellent",
+                "status": "available",
+            }
+        else:
+            values = {
+                "name": product["name"],
+                "description": product["description"],
+                "price": str(product["price"]),
+                "size": product["size"],
+                "item_condition": product["item_condition"],
+                "status": product["status"],
+            }
+
+    return (
+        render_template(
+            "admin/product_form.html",
+            product=product,
+            values=values,
+            errors=errors or {},
+            is_editing=is_editing,
+        ),
+        status,
+    )
 
 
 @bp.route("/login", methods=("GET", "POST"))
@@ -104,6 +223,122 @@ def dashboard():
     return render_template("admin/dashboard.html", products=products)
 
 
+@bp.route("/products/new", methods=("GET", "POST"))
+@login_required
+def create_product():
+    """Create a new product."""
+    if request.method == "POST":
+        values, price, errors = product_form_values(request.form)
+
+        if errors:
+            return render_product_form(
+                values=values,
+                errors=errors,
+                status=400,
+            )
+
+        db = get_db()
+        slug = unique_product_slug(values["name"])
+
+        try:
+            db.execute(
+                """
+                INSERT INTO products (
+                    slug,
+                    name,
+                    description,
+                    price,
+                    size,
+                    item_condition,
+                    status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    slug,
+                    values["name"],
+                    values["description"],
+                    price,
+                    values["size"],
+                    values["item_condition"],
+                    values["status"],
+                ),
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        flash("Product created successfully.", "success")
+        return redirect(url_for("admin.dashboard"))
+
+    return render_product_form()
+
+
+@bp.route("/products/<int:product_id>/edit", methods=("GET", "POST"))
+@login_required
+def edit_product(product_id):
+    """Edit an existing product without changing its URL slug or photo."""
+    db = get_db()
+
+    product = db.execute(
+        """
+        SELECT id, slug, name, description, price, size,
+               item_condition, status, image_filename
+        FROM products
+        WHERE id = ?
+        """,
+        (product_id,),
+    ).fetchone()
+
+    if product is None:
+        abort(404)
+
+    if request.method == "POST":
+        values, price, errors = product_form_values(request.form)
+
+        if errors:
+            return render_product_form(
+                product=product,
+                values=values,
+                errors=errors,
+                status=400,
+            )
+
+        try:
+            db.execute(
+                """
+                UPDATE products
+                SET name = ?,
+                    description = ?,
+                    price = ?,
+                    size = ?,
+                    item_condition = ?,
+                    status = ?,
+                    updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                WHERE id = ?
+                """,
+                (
+                    values["name"],
+                    values["description"],
+                    price,
+                    values["size"],
+                    values["item_condition"],
+                    values["status"],
+                    product_id,
+                ),
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        flash("Product updated successfully.", "success")
+        return redirect(url_for("admin.dashboard"))
+
+    return render_product_form(product=product)
+
+
 @bp.post("/logout")
 @login_required
 def logout():
@@ -131,8 +366,10 @@ def product_photo_preview(product_id):
 
     filename = product["image_filename"]
 
-    # Never allow a database filename to escape the upload directory.
-    if filename != Path(filename).name or filename != secure_filename(filename):
+    if (
+        filename != Path(filename).name
+        or filename != secure_filename(filename)
+    ):
         abort(404)
 
     upload_folder = Path(current_app.config["UPLOAD_FOLDER"])

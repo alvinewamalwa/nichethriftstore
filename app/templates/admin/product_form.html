@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ "Edit Product" if is_editing else "Add Product" }} | Niche Thrift Store
+{% endblock %}
+
+{% block content %}
+<section class="admin-panel">
+    <p class="eyebrow">STORE MANAGEMENT</p>
+
+    <h1>{{ "Edit product" if is_editing else "Add a new product" }}</h1>
+
+    <p>
+        {{ "Update the product details below." if is_editing
+           else "Enter the details of the item you want to list." }}
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="flash-message {{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if errors %}
+        <div class="form-errors" role="alert">
+            <p>Please correct the following errors:</p>
+            <ul>
+                {% for field, message in errors.items() %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-field">
+            <label for="name">Product name</label>
+            <input
+                id="name"
+                name="name"
+                type="text"
+                maxlength="120"
+                value="{{ values['name'] }}"
+                required
+            >
+            {% if errors.get('name') %}
+                <p class="field-error">{{ errors['name'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-field">
+            <label for="description">Description</label>
+            <textarea
+                id="description"
+                name="description"
+                rows="5"
+                maxlength="2000"
+            >{{ values['description'] }}</textarea>
+            {% if errors.get('description') %}
+                <p class="field-error">{{ errors['description'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-field">
+            <label for="price">Price (KSh)</label>
+            <input
+                id="price"
+                name="price"
+                type="number"
+                min="0"
+                max="100000000"
+                step="1"
+                value="{{ values['price'] }}"
+                required
+            >
+            {% if errors.get('price') %}
+                <p class="field-error">{{ errors['price'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-field">
+            <label for="size">Size</label>
+            <input
+                id="size"
+                name="size"
+                type="text"
+                maxlength="50"
+                placeholder="e.g. S, M, L, XL or One Size"
+                value="{{ values['size'] }}"
+            >
+            {% if errors.get('size') %}
+                <p class="field-error">{{ errors['size'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-field">
+            <label for="item_condition">Condition</label>
+            <select id="item_condition" name="item_condition" required>
+                <option
+                    value="new_with_tags"
+                    {% if values['item_condition'] == 'new_with_tags' %}selected{% endif %}
+                >
+                    New with tags
+                </option>
+
+                <option
+                    value="excellent"
+                    {% if values['item_condition'] == 'excellent' %}selected{% endif %}
+                >
+                    Excellent
+                </option>
+
+                <option
+                    value="good"
+                    {% if values['item_condition'] == 'good' %}selected{% endif %}
+                >
+                    Good
+                </option>
+
+                <option
+                    value="fair"
+                    {% if values['item_condition'] == 'fair' %}selected{% endif %}
+                >
+                    Fair
+                </option>
+            </select>
+            {% if errors.get('item_condition') %}
+                <p class="field-error">{{ errors['item_condition'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-field">
+            <label for="status">Product status</label>
+            <select id="status" name="status" required>
+                <option
+                    value="available"
+                    {% if values['status'] == 'available' %}selected{% endif %}
+                >
+                    Available
+                </option>
+
+                <option
+                    value="reserved"
+                    {% if values['status'] == 'reserved' %}selected{% endif %}
+                >
+                    Reserved
+                </option>
+
+                <option
+                    value="sold"
+                    {% if values['status'] == 'sold' %}selected{% endif %}
+                >
+                    Sold
+                </option>
+
+                <option
+                    value="hidden"
+                    {% if values['status'] == 'hidden' %}selected{% endif %}
+                >
+                    Hidden
+                </option>
+            </select>
+            {% if errors.get('status') %}
+                <p class="field-error">{{ errors['status'] }}</p>
+            {% endif %}
+        </div>
+
+        <button type="submit">
+            {{ "Save product changes" if is_editing else "Create product" }}
+        </button>
+    </form>
+
+    {% if is_editing %}
+        <p>
+            <a href="{{ url_for(
+                'admin.upload_product_photo',
+                product_id=product['id']
+            ) }}">
+                Upload or replace this product's photo
+            </a>
+        </p>
+    {% endif %}
+
+    <p>
+        <a href="{{ url_for('admin.dashboard') }}">Return to dashboard</a>
+    </p>
+</section>
+
+<style>
+    .admin-panel {
+        max-width: 700px;
+        margin: 2rem auto;
+    }
+
+    .admin-form {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .form-field {
+        display: grid;
+        gap: 0.4rem;
+    }
+
+    .form-field label {
+        font-weight: 600;
+    }
+
+    .form-field input,
+    .form-field textarea,
+    .form-field select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.75rem;
+        border: 1px solid #bbb;
+        border-radius: 5px;
+        font: inherit;
+    }
+
+    .form-field textarea {
+        resize: vertical;
+    }
+
+    .admin-form button {
+        justify-self: start;
+        padding: 0.8rem 1.2rem;
+        border: 0;
+        border-radius: 5px;
+        background: #222;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .form-errors {
+        margin: 1rem 0;
+        padding: 0.75rem 1rem;
+        border: 1px solid #b42318;
+        border-radius: 5px;
+        color: #b42318;
+    }
+
+    .field-error {
+        margin: 0;
+        color: #b42318;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
