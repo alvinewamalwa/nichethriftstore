@@ -7,21 +7,25 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 
-
 csrf = CSRFProtect()
 
 
 def create_app(test_config=None):
-    """Create and configure the Flask application."""
     load_dotenv()
 
     app = Flask(__name__, instance_relative_config=True)
 
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY"),
-        DATABASE=os.path.join(app.instance_path, "nichethriftstore.sqlite"),
+        DATABASE=os.path.join(
+            app.instance_path,
+            "nichethriftstore.sqlite",
+        ),
         MAX_CONTENT_LENGTH=5 * 1024 * 1024,
-        UPLOAD_FOLDER=os.path.join(app.instance_path, "product_images"),
+        UPLOAD_FOLDER=os.path.join(
+            app.instance_path,
+            "product_images",
+        ),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
     )
@@ -34,7 +38,7 @@ def create_app(test_config=None):
             "SECRET_KEY is missing. Add it to your local .env file."
         )
 
-    from . import admin, db, health, seed, shop
+    from . import admin, db, health, order_admin, seed, shop
 
     db.init_app(app)
     csrf.init_app(app)
@@ -44,6 +48,8 @@ def create_app(test_config=None):
     app.register_blueprint(health.bp)
     app.register_blueprint(shop.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(order_admin.bp)
+
     app.cli.add_command(admin.create_admin_command)
 
     return app

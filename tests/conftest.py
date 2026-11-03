@@ -17,6 +17,7 @@ def app(tmp_path):
             "TESTING": True,
             "DATABASE": str(database_path),
             "SECRET_KEY": "test-only-secret",
+            "WTF_CSRF_ENABLED": False,
         }
     )
 

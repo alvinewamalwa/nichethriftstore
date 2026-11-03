@@ -1,0 +1,112 @@
+
+{% extends "base.html" %}
+
+{% block title %}Order Inbox | Niche Thrift Store{% endblock %}
+
+{% block content %}
+<section class="admin-panel">
+    <p class="eyebrow">STORE MANAGEMENT</p>
+    <h1>Order Inbox</h1>
+
+    <p>
+        Customer requests are not reservations. An item remains available
+        until you manually confirm a reservation.
+    </p>
+
+    <p>
+        <a href="{{ url_for('admin.dashboard') }}">
+            &larr; Back to admin dashboard
+        </a>
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="flash-message {{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>Requests ({{ orders|length }})</h2>
+
+    {% if orders %}
+        <div class="admin-order-list">
+            {% for order in orders %}
+                <article class="admin-order">
+                    <div>
+                        <h3>
+                            {{ order['product_name'] }}
+                        </h3>
+
+                        <p>
+                            <strong>Reference:</strong>
+                            {{ order['public_ref'] }}
+                        </p>
+
+                        <p>
+                            <strong>Customer:</strong>
+                            {{ order['customer_name'] }}
+                        </p>
+
+                        <p>
+                            <strong>Contact:</strong>
+                            {{ order['contact'] }}
+                        </p>
+
+                        <p>
+                            <strong>Item price:</strong>
+                            KSh {{ "{:,}".format(order['unit_price']) }}
+                        </p>
+
+                        <p>
+                            <strong>Status:</strong>
+                            {{ order['status']|replace('_', ' ')|title }}
+                        </p>
+
+                        <p>
+                            <strong>Courier:</strong>
+                            {{ order['courier_name'] or 'Not specified' }}
+                        </p>
+
+                        <p>
+                            <strong>Collection office:</strong>
+                            {{ order['courier_office'] or 'Not specified' }}
+                        </p>
+
+                        <a href="{{ url_for(
+                            'order_admin.detail',
+                            order_id=order['id']
+                        ) }}">
+                            View and manage request
+                        </a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No customer requests have been received yet.</p>
+    {% endif %}
+</section>
+
+<style>
+    .admin-panel {
+        max-width: 900px;
+        margin: 2rem auto;
+    }
+
+    .admin-order-list {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .admin-order {
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .admin-order h3 {
+        margin-top: 0;
+    }
+</style>
+{% endblock %}

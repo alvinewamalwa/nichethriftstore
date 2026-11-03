@@ -10,31 +10,39 @@
 
     <div class="product-detail-grid">
         <div class="product-detail-image">
-            {% if product['status'] == 'sold' %}
-                <span class="product-badge sold-badge">SOLD</span>
+            {% if product['status'] == 'reserved' %}
+                <span class="product-badge reserved-badge">
+                    RESERVED
+                </span>
+            {% elif product['status'] == 'sold' %}
+                <span class="product-badge sold-badge">
+                    SOLD
+                </span>
             {% endif %}
 
-
-{% if product['image_filename'] %}
-    <img
-        class="product-detail-photo"
-        src="{{ url_for('shop.product_image', filename=product['image_filename']) }}"
-        alt="{{ product['name'] }}"
-        loading="lazy"
-    >
-{% else %}
-    <div
-        class="product-image-placeholder product-detail-image"
-        aria-label="Product photo not uploaded yet"
-    >
-        <span>Photo coming soon</span>
-    </div>
-{% endif %}
-
+            {% if product['image_filename'] %}
+                <img
+                    class="product-detail-photo"
+                    src="{{ url_for(
+                        'shop.product_image',
+                        filename=product['image_filename']
+                    ) }}"
+                    alt="{{ product['name'] }}"
+                    loading="lazy"
+                >
+            {% else %}
+                <div
+                    class="product-image-placeholder product-detail-image"
+                    aria-label="Product photo not uploaded yet"
+                >
+                    <span>Photo coming soon</span>
+                </div>
+            {% endif %}
         </div>
 
         <div class="product-detail-info">
             <p class="eyebrow">NICHE THRIFT STORE</p>
+
             <h1>{{ product['name'] }}</h1>
 
             <p class="detail-price">
@@ -59,15 +67,128 @@
                 <p class="availability available-text">
                     This item is available.
                 </p>
-                <p class="purchase-note">
-                    Shopping cart functionality is coming in a later milestone.
+
+                <p>
+                    Submit an order request below. We will contact you to
+                    confirm availability and the courier delivery charge.
+                    Sending a request does not reserve the item.
                 </p>
-            {% else %}
+
+            {% elif product['status'] == 'reserved' %}
+                <p class="availability reserved-text">
+                    This item is currently reserved.
+                </p>
+
+                <p>
+                    Someone has reserved this piece. It is not currently
+                    available for new order requests.
+                </p>
+
+            {% elif product['status'] == 'sold' %}
                 <p class="availability sold-text">
                     This item has been sold.
+                </p>
+
+                <p>
+                    This piece is no longer available, but you can explore
+                    our other unique finds.
                 </p>
             {% endif %}
         </div>
     </div>
+
+    {% if product['status'] == 'available' %}
+        <section class="order-request-section">
+            <h2>Request this item</h2>
+
+            {% if errors %}
+                <div class="form-errors" role="alert">
+                    <p><strong>Please check the following:</strong></p>
+
+                    <ul>
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <form
+                method="POST"
+                action="{{ url_for(
+                    'shop.create_order',
+                    slug=product['slug']
+                ) }}"
+                class="order-request-form"
+            >
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
+                <label for="customer_name">Your name</label>
+                <input
+                    id="customer_name"
+                    name="customer_name"
+                    type="text"
+                    maxlength="100"
+                    value="{{ form_data.get('customer_name', '') }}"
+                    required
+                >
+
+                <label for="contact">Phone or WhatsApp number</label>
+                <input
+                    id="contact"
+                    name="contact"
+                    type="text"
+                    maxlength="40"
+                    value="{{ form_data.get('contact', '') }}"
+                    placeholder="e.g. 07XX XXX XXX"
+                    required
+                >
+
+                <label for="courier_name">Preferred courier</label>
+                <input
+                    id="courier_name"
+                    name="courier_name"
+                    type="text"
+                    maxlength="100"
+                    value="{{ form_data.get('courier_name', '') }}"
+                    placeholder="e.g. North Rift"
+                    required
+                >
+
+                <label for="courier_office">
+                    Preferred courier collection office
+                </label>
+                <input
+                    id="courier_office"
+                    name="courier_office"
+                    type="text"
+                    maxlength="150"
+                    value="{{ form_data.get('courier_office', '') }}"
+                    placeholder="e.g. Nairobi town office"
+                    required
+                >
+
+                <label for="note">Additional note (optional)</label>
+                <textarea
+                    id="note"
+                    name="note"
+                    maxlength="1000"
+                    rows="4"
+                >{{ form_data.get('note', '') }}</textarea>
+
+                <p>
+                    The courier charge will be confirmed after we receive
+                    your request. Please wait for our confirmation before
+                    making any payment.
+                </p>
+
+                <button type="submit">Submit order request</button>
+            </form>
+        </section>
+    {% endif %}
 </section>
 {% endblock %}

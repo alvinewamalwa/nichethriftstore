@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Shop | Niche Thrift Store{% endblock %}
@@ -19,6 +18,7 @@
             <p class="eyebrow">THE COLLECTION</p>
             <h2>Explore our finds</h2>
         </div>
+
         <p class="catalogue-count">
             {{ products|length }} items
         </p>
@@ -30,13 +30,19 @@
                 <article class="product-card">
                     <a
                         class="product-link"
-                        href="{{ url_for('shop.product_detail', slug=product['slug']) }}"
+                        href="{{ url_for(
+                            'shop.product_detail',
+                            slug=product['slug']
+                        ) }}"
                     >
                         <div class="product-image-wrapper">
                             {% if product['image_filename'] %}
                                 <img
                                     class="product-image"
-                                    src="{{ url_for('shop.product_image', filename=product['image_filename']) }}"
+                                    src="{{ url_for(
+                                        'shop.product_image',
+                                        filename=product['image_filename']
+                                    ) }}"
                                     alt="{{ product['name'] }}"
                                     loading="lazy"
                                 >
@@ -46,7 +52,11 @@
                                 </div>
                             {% endif %}
 
-                            {% if product['status'] == 'sold' %}
+                            {% if product['status'] == 'reserved' %}
+                                <span class="product-badge reserved-badge">
+                                    RESERVED
+                                </span>
+                            {% elif product['status'] == 'sold' %}
                                 <span class="product-badge sold-badge">
                                     SOLD
                                 </span>

@@ -1,0 +1,255 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ order['public_ref'] }} | Order Management{% endblock %}
+
+{% block content %}
+<section class="admin-panel">
+    <p class="eyebrow">ORDER MANAGEMENT</p>
+    <h1>{{ order['public_ref'] }}</h1>
+
+    <p>
+        <a href="{{ url_for('order_admin.inbox') }}">
+            &larr; Back to order inbox
+        </a>
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="flash-message {{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <section class="order-information">
+        <h2>Customer and product</h2>
+
+        <p><strong>Customer:</strong> {{ order['customer_name'] }}</p>
+        <p><strong>Contact:</strong> {{ order['contact'] }}</p>
+        <p><strong>Product:</strong> {{ order['product_name'] }}</p>
+        <p>
+            <strong>Item price:</strong>
+            KSh {{ "{:,}".format(order['unit_price']) }}
+        </p>
+        <p><strong>Courier:</strong> {{ order['courier_name'] }}</p>
+        <p><strong>Collection office:</strong> {{ order['courier_office'] }}</p>
+        <p>
+            <strong>Customer note:</strong>
+            {{ order['note'] or 'No additional note.' }}
+        </p>
+        <p>
+            <strong>Order status:</strong>
+            {{ order['status']|replace('_', ' ')|title }}
+        </p>
+    </section>
+
+    <section class="payment-information">
+        <h2>Payment summary</h2>
+
+        <p>
+            <strong>Item price:</strong>
+            KSh {{ "{:,}".format(order['unit_price']) }}
+        </p>
+
+        <p>
+            <strong>Courier charge:</strong>
+            {% if order['delivery_charge'] is not none %}
+                KSh {{ "{:,}".format(order['delivery_charge']) }}
+            {% else %}
+                Not yet quoted
+            {% endif %}
+        </p>
+
+        <p>
+            <strong>Total order amount:</strong>
+            KSh {{ "{:,}".format(order['total']) }}
+        </p>
+
+        <p>
+            <strong>Deposit received:</strong>
+            KSh {{ "{:,}".format(order['deposit_paid']) }}
+        </p>
+
+        <p>
+            <strong>Additional payments received:</strong>
+            KSh {{ "{:,}".format(order['balance_paid']) }}
+        </p>
+
+        <p>
+            <strong>Total received:</strong>
+            KSh {{ "{:,}".format(total_paid) }}
+        </p>
+
+        <p>
+            <strong>Outstanding:</strong>
+            KSh {{ "{:,}".format(outstanding) }}
+        </p>
+
+        {% if order['reservation_expires_at'] %}
+            <p>
+                <strong>Reservation expires:</strong>
+                {{ order['reservation_expires_at'] }}
+            </p>
+        {% endif %}
+    </section>
+
+    {% if order['status'] == 'new' %}
+        <section class="admin-action">
+            <h2>Contact customer</h2>
+
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="contacted">
+
+                <button type="submit">Mark as contacted</button>
+            </form>
+        </section>
+    {% endif %}
+
+    {% if order['status'] in ['new', 'contacted'] %}
+        <section class="admin-action">
+            <h2>Confirm reservation</h2>
+
+            <p>
+                The minimum deposit is 75% of the item price:
+                <strong>KSh {{ "{:,}".format(minimum_deposit) }}</strong>.
+                The reservation lasts three days.
+            </p>
+
+            <form method="post" class="order-admin-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="confirm">
+
+                <label for="delivery_charge">Courier delivery charge (KES)</label>
+                <input
+                    id="delivery_charge"
+                    name="delivery_charge"
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                >
+
+                <label for="deposit_paid">Deposit received (KES)</label>
+                <input
+                    id="deposit_paid"
+                    name="deposit_paid"
+                    type="number"
+                    min="{{ minimum_deposit }}"
+                    step="1"
+                    required
+                >
+
+                <button type="submit">Confirm reservation</button>
+            </form>
+        </section>
+    {% endif %}
+
+    {% if order['status'] == 'confirmed' %}
+        <section class="admin-action">
+            <h2>Record additional payment</h2>
+
+            {% if outstanding > 0 %}
+                <form method="post" class="order-admin-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="balance">
+
+                    <label for="amount">Amount received (KES)</label>
+                    <input
+                        id="amount"
+                        name="amount"
+                        type="number"
+                        min="1"
+                        max="{{ outstanding }}"
+                        step="1"
+                        required
+                    >
+
+                    <button type="submit">Record payment</button>
+                </form>
+            {% else %}
+                <p>Full payment has been received.</p>
+            {% endif %}
+        </section>
+
+        <section class="admin-action">
+            <h2>Complete order</h2>
+
+            <p>
+                Only complete the order after full payment and dispatch
+                to the customer's chosen courier collection office.
+            </p>
+
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="complete">
+
+                <button type="submit" {% if outstanding > 0 %}disabled{% endif %}>
+                    Mark as completed
+                </button>
+            </form>
+        </section>
+    {% endif %}
+
+    {% if order['status'] in ['new', 'contacted', 'confirmed'] %}
+        <section class="admin-action">
+            <h2>Cancel order</h2>
+
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="cancel">
+
+                <button type="submit" class="danger-button">
+                    Cancel order
+                </button>
+            </form>
+        </section>
+    {% endif %}
+</section>
+
+<style>
+    .admin-panel {
+        max-width: 800px;
+        margin: 2rem auto;
+    }
+
+    .order-information,
+    .payment-information,
+    .admin-action {
+        margin: 1.5rem 0;
+        padding: 1.25rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .order-admin-form {
+        display: grid;
+        gap: 0.65rem;
+        max-width: 450px;
+    }
+
+    .order-admin-form input {
+        width: 100%;
+        padding: 0.7rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .order-admin-form button,
+    .admin-action button {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+    }
+
+    .admin-action button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .danger-button {
+        background: #8b1e1e;
+        color: white;
+        border: 0;
+    }
+</style>
+{% endblock %}
