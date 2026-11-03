@@ -3,7 +3,13 @@
 {% block title %}Admin Dashboard | Niche Thrift Store{% endblock %}
 
 {% block content %}
-<section class="admin-panel">
+<section
+    class="admin-panel"
+    id="admin-dashboard"
+    data-count-url="{{ url_for('admin.new_order_count') }}"
+    data-inbox-url="{{ url_for('order_admin.inbox') }}"
+    data-initial-count="{{ new_order_count }}"
+>
     <p class="eyebrow">STORE MANAGEMENT</p>
     <h1>Admin Dashboard</h1>
 
@@ -18,9 +24,50 @@
         {% endif %}
     {% endwith %}
 
+    <div class="notification-panel" aria-live="polite">
+        <div>
+            <p class="notification-heading">New customer orders</p>
+
+            <p class="notification-count" id="new-order-count">
+                {{ new_order_count }}
+            </p>
+
+            <p class="notification-description" id="notification-status">
+                {% if new_order_count == 1 %}
+                    You have 1 new order waiting.
+                {% elif new_order_count > 1 %}
+                    You have {{ new_order_count }} new orders waiting.
+                {% else %}
+                    No new orders waiting.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="notification-actions">
+            <a
+                class="admin-button"
+                href="{{ url_for('order_admin.inbox') }}"
+            >
+                View order inbox
+            </a>
+
+            <button
+                type="button"
+                class="secondary-button"
+                id="enable-notifications"
+            >
+                Enable browser notifications
+            </button>
+        </div>
+    </div>
+
     <div class="admin-actions">
         <a class="admin-button" href="{{ url_for('admin.create_product') }}">
             Add new product
+        </a>
+
+        <a class="admin-button" href="{{ url_for('order_admin.inbox') }}">
+            Order inbox
         </a>
 
         <form method="post" action="{{ url_for('admin.logout') }}">
@@ -110,6 +157,42 @@
         margin: 2rem auto;
     }
 
+    .notification-panel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        margin: 1.5rem 0;
+        padding: 1.25rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #f8f8f8;
+    }
+
+    .notification-heading {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .notification-count {
+        margin: 0.25rem 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .notification-description {
+        margin: 0;
+        color: #555;
+    }
+
+    .notification-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
     .admin-actions {
         display: flex;
         align-items: center;
@@ -137,6 +220,16 @@
 
     .secondary-button {
         background: #666;
+    }
+
+    .admin-button:hover,
+    .secondary-button:hover {
+        opacity: 0.85;
+    }
+
+    .notification-actions button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 
     .admin-product-list {
@@ -196,6 +289,152 @@
             width: 100%;
             height: 220px;
         }
+
+        .notification-actions {
+            width: 100%;
+        }
     }
 </style>
+
+<script>
+    (() => {
+        const dashboard = document.getElementById("admin-dashboard");
+
+        if (!dashboard) {
+            return;
+        }
+
+        const countUrl = dashboard.dataset.countUrl;
+        const inboxUrl = dashboard.dataset.inboxUrl;
+
+        const countElement = document.getElementById("new-order-count");
+        const statusElement = document.getElementById("notification-status");
+        const enableButton = document.getElementById("enable-notifications");
+
+        let previousCount = Number(dashboard.dataset.initialCount);
+
+        function updateNotificationButton() {
+            if (!("Notification" in window)) {
+                enableButton.textContent = "Notifications not supported";
+                enableButton.disabled = true;
+                return;
+            }
+
+            if (Notification.permission === "granted") {
+                enableButton.textContent = "Browser notifications enabled";
+                enableButton.disabled = true;
+            } else if (Notification.permission === "denied") {
+                enableButton.textContent = "Notifications blocked by browser";
+                enableButton.disabled = true;
+            } else {
+                enableButton.textContent = "Enable browser notifications";
+                enableButton.disabled = false;
+            }
+        }
+
+        function updateOrderDisplay(count) {
+            countElement.textContent = count;
+
+            if (count === 0) {
+                statusElement.textContent = "No new orders waiting.";
+            } else if (count === 1) {
+                statusElement.textContent = "You have 1 new order waiting.";
+            } else {
+                statusElement.textContent =
+                    `You have ${count} new orders waiting.`;
+            }
+        }
+
+        function showOrderNotification(count) {
+            if (
+                !("Notification" in window) ||
+                Notification.permission !== "granted"
+            ) {
+                return;
+            }
+
+            const notification = new Notification(
+                "New order | Niche Thrift Store",
+                {
+                    body: count === 1
+                        ? "A new customer order has arrived."
+                        : `${count} new customer orders are waiting.`,
+                    tag: "niche-thrift-store-new-orders"
+                }
+            );
+
+            notification.onclick = () => {
+                window.focus();
+                window.location.href = inboxUrl;
+            };
+        }
+
+        async function checkForNewOrders() {
+            try {
+                const response = await fetch(countUrl, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                const currentCount = Number(data.new_order_count);
+
+                if (!Number.isFinite(currentCount)) {
+                    return;
+                }
+
+                updateOrderDisplay(currentCount);
+
+                if (currentCount > previousCount) {
+                    showOrderNotification(currentCount);
+                }
+
+                previousCount = currentCount;
+            } catch (error) {
+                console.error("Could not check for new orders:", error);
+            }
+        }
+
+        enableButton.addEventListener("click", async () => {
+            if (!("Notification" in window)) {
+                statusElement.textContent =
+                    "This browser does not support notifications.";
+                return;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+
+                updateNotificationButton();
+
+                if (permission === "granted") {
+                    statusElement.textContent =
+                        "Browser notifications are enabled.";
+                } else if (permission === "denied") {
+                    statusElement.textContent =
+                        "Notifications were blocked. You can change this in your browser settings.";
+                } else {
+                    statusElement.textContent =
+                        "Notification permission was not granted.";
+                }
+            } catch (error) {
+                statusElement.textContent =
+                    "Could not enable browser notifications.";
+            }
+        });
+
+        updateNotificationButton();
+
+        // Check for new orders every 30 seconds while the dashboard is open.
+        window.setInterval(checkForNewOrders, 30000);
+    })();
+</script>
 {% endblock %}

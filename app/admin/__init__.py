@@ -13,6 +13,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -212,7 +213,9 @@ def login():
 @login_required
 def dashboard():
     """Display the administrator dashboard."""
-    products = get_db().execute(
+    db = get_db()
+
+    products = db.execute(
         """
         SELECT id, slug, name, price, status, image_filename
         FROM products
@@ -220,7 +223,34 @@ def dashboard():
         """
     ).fetchall()
 
-    return render_template("admin/dashboard.html", products=products)
+    new_order_count = db.execute(
+        """
+        SELECT COUNT(*)
+        FROM orders
+        WHERE status = 'new'
+        """
+    ).fetchone()[0]
+
+    return render_template(
+        "admin/dashboard.html",
+        products=products,
+        new_order_count=new_order_count,
+    )
+
+
+@bp.get("/new-order-count")
+@login_required
+def new_order_count():
+    """Return the current number of new customer orders."""
+    count = get_db().execute(
+        """
+        SELECT COUNT(*)
+        FROM orders
+        WHERE status = 'new'
+        """
+    ).fetchone()[0]
+
+    return jsonify({"new_order_count": count})
 
 
 @bp.route("/products/new", methods=("GET", "POST"))
